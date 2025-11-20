@@ -43,10 +43,13 @@ class BookingRepository implements BookingRepositoryInterface
     {
         return $this->booking->with([
             'trip',
+            'trip.assets',
             'tripDuration',
             'tripDuration.tripPrices',
             'boat',
+            'boat.assets',
             'cabin',
+            'cabin.assets',
             'user',
             'hotelOccupancy',
             'hotelOccupancy.surcharges',
@@ -65,10 +68,13 @@ class BookingRepository implements BookingRepositoryInterface
         try {
             return $this->booking->with([
                 'trip',
+                'trip.assets',
                 'tripDuration',
                 'tripDuration.tripPrices',
                 'boat',
+                'boat.assets',
                 'cabin',
+                'cabin.assets',
                 'user',
                 'hotelOccupancy',
                 'hotelOccupancy.surcharges',
@@ -91,10 +97,13 @@ class BookingRepository implements BookingRepositoryInterface
         return $this->booking->where('name', $name)
             ->with([
                 'trip',
+                'trip.assets',
                 'tripDuration',
                 'tripDuration.tripPrices',
                 'boat',
+                'boat.assets',
                 'cabin',
+                'cabin.assets',
                 'user',
                 'hotelOccupancy',
                 'additionalFees'
@@ -111,10 +120,13 @@ class BookingRepository implements BookingRepositoryInterface
     {
         return $this->booking->with([
             'trip',
+            'trip.assets',
             'tripDuration',
             'tripDuration.tripPrices',
             'boat',
+            'boat.assets',
             'cabin',
+            'cabin.assets',
             'user',
             'hotelOccupancy',
             'additionalFees'
@@ -395,5 +407,59 @@ class BookingRepository implements BookingRepositoryInterface
             return $booking;
         }
         return null;
+    }
+
+    /**
+     * Mengambil booking berdasarkan user_id.
+     *
+     * @param int $userId
+     * @return mixed
+     */
+    public function getBookingsByUserId($userId)
+    {
+        // Ambil user untuk mendapatkan email
+        $user = \App\Models\User::find($userId);
+        
+        if (!$user) {
+            return collect([]);
+        }
+        
+        // Query booking berdasarkan user_id atau customer_email (untuk booking lama yang mungkin tidak punya user_id)
+        // Gunakan whereRaw untuk case-insensitive comparison
+        $bookings = $this->booking->where(function ($query) use ($userId, $user) {
+                $query->where('user_id', $userId);
+                
+                // Jika user punya email, juga cari berdasarkan email (case insensitive)
+                if ($user->email) {
+                    $query->orWhereRaw('LOWER(customer_email) = LOWER(?)', [$user->email]);
+                }
+            })
+            ->with([
+                'trip',
+                'trip.assets',
+                'tripDuration',
+                'tripDuration.tripPrices',
+                'boat',
+                'boat.assets',
+                'cabin',
+                'cabin.assets',
+                'user',
+                'hotelOccupancy',
+                'hotelOccupancy.surcharges',
+                'additionalFees'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Update user_id untuk booking yang belum punya user_id (untuk konsistensi data)
+        foreach ($bookings as $booking) {
+            if (!$booking->user_id && $booking->customer_email && 
+                strtolower(trim($booking->customer_email)) === strtolower(trim($user->email))) {
+                $booking->user_id = $userId;
+                $booking->save();
+            }
+        }
+        
+        return $bookings;
     }
 }

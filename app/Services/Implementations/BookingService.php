@@ -36,10 +36,15 @@ class BookingService implements BookingServiceInterface
     /**
      * Mengambil semua bookings.
      *
+     * @param bool $forceRefresh Force refresh dari database (bypass cache)
      * @return mixed
      */
-    public function getAllBookings()
+    public function getAllBookings($forceRefresh = false)
     {
+        if ($forceRefresh) {
+            Cache::forget(self::BOOKING_ALL_CACHE_KEY);
+        }
+        
         return Cache::remember(self::BOOKING_ALL_CACHE_KEY, 3600, function () {
             return $this->bookingRepository->getAllBookings();
         });
@@ -128,7 +133,7 @@ class BookingService implements BookingServiceInterface
         if ($booking) {
             // Sinkronisasi additional fees (baik fee wajib dan optional)
             $this->syncAdditionalFees($booking, $data);
-            $this->clearBookingCaches();
+            $this->clearBookingCaches($booking->user_id ?? null);
         }
         return $booking;
     }
@@ -145,7 +150,7 @@ class BookingService implements BookingServiceInterface
         $booking = $this->bookingRepository->updateBooking($id, $data);
         if ($booking) {
             $this->syncAdditionalFees($booking, $data);
-            $this->clearBookingCaches();
+            $this->clearBookingCaches($booking->user_id ?? null);
         }
         return $booking;
     }
@@ -158,8 +163,10 @@ class BookingService implements BookingServiceInterface
      */
     public function deleteBooking($id)
     {
+        $booking = $this->getBookingById($id);
+        $userId = $booking ? ($booking->user_id ?? null) : null;
         $result = $this->bookingRepository->deleteBooking($id);
-        $this->clearBookingCaches();
+        $this->clearBookingCaches($userId);
         return $result;
     }
 
@@ -221,7 +228,7 @@ class BookingService implements BookingServiceInterface
         if ($booking) {
             $result = $this->bookingRepository->updateBookingStatus($id, $status);
 
-            $this->clearBookingCaches($id);
+            $this->clearBookingCaches($booking->user_id ?? null);
 
             return $result;
         }
@@ -230,16 +237,35 @@ class BookingService implements BookingServiceInterface
     }
 
     /**
+     * Mengambil booking berdasarkan user_id.
+     *
+     * @param int $userId
+     * @return mixed
+     */
+    public function getBookingsByUserId($userId)
+    {
+        $cacheKey = 'bookings_user_' . $userId;
+        return Cache::remember($cacheKey, 3600, function () use ($userId) {
+            return $this->bookingRepository->getBookingsByUserId($userId);
+        });
+    }
+
+    /**
      * Menghapus semua cache booking
      *
+     * @param int|null $userId
      * @return void
      */
-    public function clearBookingCaches()
+    public function clearBookingCaches($userId = null)
     {
         Cache::forget(self::BOOKING_ALL_CACHE_KEY);
         Cache::forget(self::BOOKING_ACTIVE_CACHE_KEY);
         Cache::forget(self::BOOKING_PENDING_CACHE_KEY);
         Cache::forget(self::BOOKING_CONFIRMED_CACHE_KEY);
         Cache::forget(self::BOOKING_CANCELLED_CACHE_KEY);
+        
+        if ($userId) {
+            Cache::forget('bookings_user_' . $userId);
+        }
     }
 }

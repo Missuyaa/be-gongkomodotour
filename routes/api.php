@@ -86,6 +86,11 @@ Route::prefix('landing-page')->group(function () {
     Route::get('/transactions/{id}', [TransactionController::class, 'show']);
 });
 
+// Public asset serving - tidak memerlukan autentikasi (harus di luar middleware auth)
+Route::get('assets/{id}/serve', [AssetController::class, 'serveImage']);
+Route::get('files/asset/{id}', [FileController::class, 'serveAsset']);
+Route::get('files/{path}', [FileController::class, 'serveFile'])->where('path', '.*');
+
 Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
     // Profile update route - semua user yang terautentikasi bisa update profilnya sendiri
     // Route tanpa ID (menggunakan ID user yang sedang login)
@@ -184,17 +189,18 @@ Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
         Route::post('assets/multiple', [AssetController::class, 'storeMultiple']);
     });
 
-    // Public asset serving - tidak memerlukan autentikasi
-    Route::get('assets/{id}/serve', [AssetController::class, 'serveImage']);
-
-    // Public file serving dengan keamanan yang lebih baik
-    Route::get('files/asset/{id}', [FileController::class, 'serveAsset']);
-    Route::get('files/{path}', [FileController::class, 'serveFile'])->where('path', '.*');
-    // Bookings - Protected Routes
+    // Bookings - Customer can view their own bookings
+    Route::get('my-bookings', [BookingController::class, 'myBookings']);
+    
+    // Bookings - Protected Routes (Admin only)
     Route::middleware('permission:mengelola bookings')->group(function () {
-        Route::apiResource('bookings', BookingController::class)->except(['store']);
+        Route::apiResource('bookings', BookingController::class)->except(['store', 'index', 'show']);
+        Route::get('bookings', [BookingController::class, 'index']);
         Route::patch('bookings/{id}/status', [BookingController::class, 'updateStatus']);
     });
+    
+    // Route khusus untuk show booking - dengan pengecekan khusus untuk melihat booking sendiri
+    Route::get('bookings/{id}', [BookingController::class, 'show']);
     // Transactions
     Route::middleware('permission:mengelola transactions')->group(function () {
         Route::apiResource('transactions', TransactionController::class);
