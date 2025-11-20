@@ -71,15 +71,45 @@ class CustomersController extends Controller
 
     /**
      * Update the specified resource in storage.
+     * Jika user sedang update data customernya sendiri, tidak perlu permission.
+     * Jika user sedang update customer lain, perlu permission "mengelola customers".
      */
     public function update(CustomersUpdateRequest $request, string $id)
     {
-        $customer = $this->customersService->updateCustomer($id, $request->validated());
+        // Ambil customer yang akan diupdate
+        $customer = $this->customersService->getCustomerById($id);
         if (!$customer) {
             return response()->json(['message' => 'Customer not found'], 404);
         }
+        
+        // Jika user sedang update data customernya sendiri, izinkan tanpa permission
+        if ($request->user()->id == $customer->user_id) {
+            // Hapus field yang tidak boleh diubah oleh customer sendiri
+            $data = $request->validated();
+            unset($data['user_id']); // Customer tidak boleh mengubah user_id
+            unset($data['status']); // Customer tidak boleh mengubah status
+            
+            $updatedCustomer = $this->customersService->updateCustomer($id, $data);
+            if (!$updatedCustomer) {
+                return response()->json(['message' => 'Customer not found'], 404);
+            }
+            return new CustomerResource($updatedCustomer);
+        }
+        
+        // Untuk update customer lain, cek permission
+        if (!$request->user()->can('mengelola customers')) {
+            return response()->json([
+                'message' => 'User does not have the right permissions.'
+            ], 403);
+        }
+        
+        // Untuk update customer lain, tetap menggunakan logic biasa (perlu permission)
+        $updatedCustomer = $this->customersService->updateCustomer($id, $request->validated());
+        if (!$updatedCustomer) {
+            return response()->json(['message' => 'Customer not found'], 404);
+        }
 
-        return new CustomerResource($customer);
+        return new CustomerResource($updatedCustomer);
     }
 
     /**

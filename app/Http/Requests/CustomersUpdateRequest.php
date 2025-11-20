@@ -24,7 +24,7 @@ class CustomersUpdateRequest extends FormRequest
         return [
             'user_id' => 'sometimes|required|integer|exists:users,id',
             'alamat' => 'sometimes|required|string|max:255',
-            'no_hp' => 'sometimes|required|string|max:15',
+            'no_hp' => 'sometimes|required|string|max:20',
             'nasionality' => 'sometimes|required|string|max:50',
             'region' => 'sometimes|required|string|max:50',
             'status' => 'sometimes|required|string|in:Aktif, Non Aktif',

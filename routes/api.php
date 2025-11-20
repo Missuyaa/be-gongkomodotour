@@ -87,6 +87,14 @@ Route::prefix('landing-page')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
+    // Profile update route - semua user yang terautentikasi bisa update profilnya sendiri
+    // Route tanpa ID (menggunakan ID user yang sedang login)
+    Route::put('profile', [UserController::class, 'updateProfile']);
+    Route::patch('profile', [UserController::class, 'updateProfile']);
+    // Route dengan ID (untuk kompatibilitas)
+    Route::put('profile/{id}', [UserController::class, 'updateProfile']);
+    Route::patch('profile/{id}', [UserController::class, 'updateProfile']);
+    
     // Permissions
     Route::middleware('permission:mengelola permissions')->group(function () {
         Route::apiResource('permissions', PermissionController::class);
@@ -99,9 +107,13 @@ Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
     });
     // Users
     Route::middleware('permission:mengelola user')->group(function () {
-        Route::apiResource('users', UserController::class);
+        Route::apiResource('users', UserController::class)->except(['update']);
         Route::patch('users/{id}/status', [UserController::class, 'updateStatus']);
     });
+    
+    // Route khusus untuk update user - dengan pengecekan khusus untuk update profil sendiri
+    Route::put('users/{id}', [UserController::class, 'update']);
+    Route::patch('users/{id}', [UserController::class, 'update']);
     // Trips
     Route::middleware('permission:mengelola trips')->group(function () {
         Route::apiResource('trips', TripController::class);
@@ -109,9 +121,13 @@ Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
     });
     // Customers
     Route::middleware('permission:mengelola customers')->group(function () {
-        Route::apiResource('customers', CustomersController::class);
+        Route::apiResource('customers', CustomersController::class)->except(['update']);
         Route::patch('customers/{id}/status', [CustomersController::class, 'updateStatus']);
     });
+    
+    // Route khusus untuk update customer - dengan pengecekan khusus untuk update profil sendiri
+    Route::put('customers/{id}', [CustomersController::class, 'update']);
+    Route::patch('customers/{id}', [CustomersController::class, 'update']);
     // Hotel Occupancies
     Route::middleware('permission:mengelola hotel_occupancies|melihat hotel occupancy')->group(function () {
         Route::apiResource('hotels', HotelOccupanciesController::class);

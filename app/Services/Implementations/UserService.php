@@ -176,6 +176,50 @@ class UserService implements UserServiceInterface
     }
 
     /**
+     * Mengupdate profil user sendiri (termasuk data customer jika ada).
+     *
+     * @param int $id
+     * @param array $data
+     * @return mixed
+     */
+    public function updateProfile($id, array $data)
+    {
+        // Pisahkan data user dan customer
+        $userData = [];
+        $customerData = [];
+        
+        $userFields = ['name', 'email', 'password'];
+        $customerFields = ['alamat', 'no_hp', 'nasionality', 'region'];
+        
+        foreach ($data as $key => $value) {
+            if (in_array($key, $userFields)) {
+                $userData[$key] = $value;
+            } elseif (in_array($key, $customerFields)) {
+                $customerData[$key] = $value;
+            }
+        }
+        
+        // Update user data
+        $user = null;
+        if (!empty($userData)) {
+            $user = $this->userRepository->updateUser($id, $userData);
+        } else {
+            $user = $this->getUserById($id);
+        }
+        
+        // Update customer data jika ada
+        if ($user && !empty($customerData) && $user->customer) {
+            $user->customer->update($customerData);
+            $user->load('customer');
+        }
+        
+        // Clear cache
+        $this->clearUserCaches($id);
+        
+        return $user;
+    }
+
+    /**
      * Menghapus semua cache user
      *
      * @param int|null $id
