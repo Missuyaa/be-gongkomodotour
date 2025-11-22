@@ -106,8 +106,9 @@ class TransactionController extends Controller
 
     /**
      * Get transactions by booking_id for the authenticated user.
-     * - If user has permission "mengelola transactions" (Admin/Staff), return all transactions for the booking
-     * - Otherwise, verify that the booking belongs to the user before returning transactions
+     * - If booking_id is provided: return transactions for that booking (with ownership verification for customers)
+     * - If booking_id is NOT provided and user is admin: return all transactions (call index method)
+     * - If booking_id is NOT provided and user is customer: return error
      */
     public function getTransactionsByBooking(Request $request)
     {
@@ -117,6 +118,20 @@ class TransactionController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
+        // Jika booking_id tidak ada, dan user adalah admin, panggil method index()
+        if (!$request->has('booking_id') || !$request->query('booking_id')) {
+            // Jika user punya permission mengelola transactions, kembalikan semua transaksi (seperti index)
+            if ($user->can('mengelola transactions')) {
+                return $this->index($request);
+            } else {
+                // Customer tidak bisa melihat semua transaksi tanpa booking_id
+                return response()->json([
+                    'message' => 'booking_id is required'
+                ], 422);
+            }
+        }
+
+        // Validasi booking_id jika ada
         $request->validate([
             'booking_id' => 'required|exists:bookings,id',
         ]);
