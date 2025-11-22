@@ -14,24 +14,24 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create a super admin user using the User factory
-        $superAdmin = User::factory()->create([
-            'name'  => 'Super Admin',
-            'email' => 'superadmin@example.com',
+        // Create an admin user using the User factory
+        $admin = User::factory()->create([
+            'name'  => 'Admin',
+            'email' => 'admin@example.com',
         ]);
 
-        // Assign the Super Admin role
-        $superAdmin->assignRole('Super Admin');
+        // Assign the Admin role
+        $admin->assignRole('Admin');
         // Remove the user from the default role
-        $superAdmin->removeRole('Pelanggan');
+        $admin->removeRole('Pelanggan');
 
         // Create additional users as needed using the factory
-        // Example: create an admin user
-        // $admin = User::factory()->create([
-        //     'name'  => 'Admin User',
-        //     'email' => 'admin@example.com',
+        // Example: create a staff user
+        // $staff = User::factory()->create([
+        //     'name'  => 'Staff User',
+        //     'email' => 'staff@example.com',
         // ]);
-        // $admin->assignRole('Admin');
+        // $staff->assignRole('Staff');
         // Remove the user from the default role
         // $admin->removeRole('Pelanggan');
 

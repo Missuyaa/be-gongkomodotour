@@ -76,9 +76,9 @@ class UserUpdateRequest extends FormRequest
                 'required',
                 'in:Aktif,Non Aktif',
                 function ($attribute, $value, $fail) use ($user) {
-                    // Validasi jika user memiliki role "Super Admin", status tidak bisa diubah menjadi Non Aktif
-                    if ($user && $user->hasRole('Super Admin') && $value === 'Non Aktif') {
-                        $fail('User dengan role Super Admin tidak dapat di-nonaktifkan.');
+                    // Validasi jika user memiliki role "Admin", status tidak bisa diubah menjadi Non Aktif
+                    if ($user && $user->hasRole('Admin') && $value === 'Non Aktif') {
+                        $fail('User dengan role Admin tidak dapat di-nonaktifkan.');
                     }
                 },
             ],

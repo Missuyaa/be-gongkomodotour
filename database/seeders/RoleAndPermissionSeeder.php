@@ -69,20 +69,20 @@ class RoleAndPermissionSeeder extends Seeder
         }
 
         // create roles
-        $superAdmin = Role::create(['name' => 'Super Admin']);
         $admin = Role::create(['name' => 'Admin']);
+        $staff = Role::create(['name' => 'Staff']);
         $pelanggan = Role::create(['name' => 'Pelanggan']);
 
-        // assign all permissions to Super Admin
-        $superAdmin->givePermissionTo(Permission::all());
+        // assign all permissions to Admin
+        $admin->givePermissionTo(Permission::all());
 
-        // For Admin, assign all permissions except those for managing role, user, and permissions
-        $adminPermissions = Permission::whereNotIn('name', [
+        // For Staff, assign all permissions except those for managing role, user, and permissions
+        $staffPermissions = Permission::whereNotIn('name', [
             'mengelola role',
             'mengelola user',
             'mengelola permissions'
         ])->get();
-        $admin->givePermissionTo($adminPermissions);
+        $staff->givePermissionTo($staffPermissions);
 
         // For Pelanggan, assign only specific additional permissions
         $pelanggan->givePermissionTo([
