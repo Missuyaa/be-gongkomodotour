@@ -267,7 +267,7 @@ class TransactionService implements TransactionServiceInterface
                     if (!isset($detail['hotel_request_id'])) {
                         $hotelRequest = HotelRequest::create([
                             'transaction_id'       => $transaction->id,
-                            'user_id'              => Auth::id(), // sesuaikan dengan logika otentikasi yang digunakan
+                            'user_id'              => Auth::id(),
                             'confirmed_note'       => $detail['confirmed_note'] ?? '',
                             'requested_hotel_name' => $detail['requested_hotel_name'] ?? '',
                             'request_status'       => 'Menunggu Konfirmasi',
