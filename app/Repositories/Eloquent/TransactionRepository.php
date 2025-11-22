@@ -177,4 +177,17 @@ class TransactionRepository implements TransactionRepositoryInterface
         }
         return null;
     }
+
+    /**
+     * Mengambil transaksi berdasarkan booking_id.
+     *
+     * @param int $bookingId
+     * @return mixed
+     */
+    public function getTransactionsByBookingId($bookingId)
+    {
+        return $this->model->with('details', 'booking', 'assets')
+            ->where('booking_id', $bookingId)
+            ->get();
+    }
 }

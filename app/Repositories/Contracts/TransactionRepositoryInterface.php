@@ -68,4 +68,12 @@ interface TransactionRepositoryInterface
      * @return mixed
      */
     public function updateTransactionStatus($id, $status);
+
+    /**
+     * Mengambil transaksi berdasarkan booking_id.
+     *
+     * @param int $bookingId
+     * @return mixed
+     */
+    public function getTransactionsByBookingId($bookingId);
 }

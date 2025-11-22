@@ -201,11 +201,18 @@ Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
     
     // Route khusus untuk show booking - dengan pengecekan khusus untuk melihat booking sendiri
     Route::get('bookings/{id}', [BookingController::class, 'show']);
-    // Transactions
+    
+    // Transactions - Customer can view their own transactions by booking_id
+    Route::get('transactions', [TransactionController::class, 'getTransactionsByBooking']);
+    
+    // Transactions - Protected Routes (Admin/Staff only)
     Route::middleware('permission:mengelola transactions')->group(function () {
-        Route::apiResource('transactions', TransactionController::class);
+        Route::apiResource('transactions', TransactionController::class)->except(['store', 'index', 'show']);
         Route::patch('transactions/{id}/status', [TransactionController::class, 'updateStatus']);
     });
+    
+    // Route khusus untuk show transaction - dengan pengecekan khusus untuk melihat transaction sendiri
+    Route::get('transactions/{id}', [TransactionController::class, 'show']);
     // Bank Accounts
     Route::middleware('permission:mengelola bank account')->group(function () {
         Route::apiResource('bank_accounts', BankAccountController::class);

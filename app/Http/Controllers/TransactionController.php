@@ -103,4 +103,61 @@ class TransactionController extends Controller
         }
         return new TransactionResource($transaction);
     }
+
+    /**
+     * Get transactions by booking_id for the authenticated user.
+     * - If user has permission "mengelola transactions" (Admin/Staff), return all transactions for the booking
+     * - Otherwise, verify that the booking belongs to the user before returning transactions
+     */
+    public function getTransactionsByBooking(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'booking_id' => 'required|exists:bookings,id',
+        ]);
+
+        $bookingId = $request->query('booking_id');
+
+        // Jika user punya permission mengelola transactions, kembalikan semua transaksi untuk booking tersebut
+        if ($user->can('mengelola transactions')) {
+            $transactions = $this->transactionService->getTransactionsByBookingId($bookingId);
+        } else {
+            // Customer biasa - verifikasi bahwa booking tersebut milik user
+            $booking = \App\Models\Booking::find($bookingId);
+            
+            if (!$booking) {
+                return response()->json(['message' => 'Booking not found'], 404);
+            }
+
+            // Cek apakah booking milik user yang login
+            if ($booking->user_id && $booking->user_id != $user->id) {
+                // Jika tidak ada user_id, cek berdasarkan email
+                if (!$booking->user_id && $booking->customer_email) {
+                    if (strtolower(trim($booking->customer_email)) !== strtolower(trim($user->email))) {
+                        return response()->json([
+                            'message' => 'User does not have the right permissions.'
+                        ], 403);
+                    }
+                } else {
+                    return response()->json([
+                        'message' => 'User does not have the right permissions.'
+                    ], 403);
+                }
+            }
+
+            $transactions = $this->transactionService->getTransactionsByBookingId($bookingId);
+        }
+
+        // Pastikan transactions adalah collection
+        if (!($transactions instanceof \Illuminate\Support\Collection)) {
+            $transactions = collect($transactions);
+        }
+
+        return TransactionResource::collection($transactions);
+    }
 }
