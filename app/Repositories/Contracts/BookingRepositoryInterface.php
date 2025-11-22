@@ -68,4 +68,12 @@ interface BookingRepositoryInterface
      * @return mixed
      */
     public function updateBookingStatus($id, $status);
+
+    /**
+     * Mengambil booking berdasarkan user_id.
+     *
+     * @param int $userId
+     * @return mixed
+     */
+    public function getBookingsByUserId($userId);
 }

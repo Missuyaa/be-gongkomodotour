@@ -31,6 +31,8 @@ class BookingResource extends JsonResource
             'customer_country' => $this->customer_country,
             'customer_phone' => $this->customer_phone,
             'is_hotel_requested' => $this->is_hotel_requested,
+            'start_date' => $this->start_date ? (is_string($this->start_date) ? $this->start_date : $this->start_date->format('Y-m-d')) : null,
+            'end_date' => $this->end_date ? (is_string($this->end_date) ? $this->end_date : $this->end_date->format('Y-m-d')) : null,
 
             'trip' => $this->whenLoaded('trip', function () {
                 return TripResource::make($this->trip);

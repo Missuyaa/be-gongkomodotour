@@ -86,7 +86,20 @@ Route::prefix('landing-page')->group(function () {
     Route::get('/transactions/{id}', [TransactionController::class, 'show']);
 });
 
+// Public asset serving - tidak memerlukan autentikasi (harus di luar middleware auth)
+Route::get('assets/{id}/serve', [AssetController::class, 'serveImage']);
+Route::get('files/asset/{id}', [FileController::class, 'serveAsset']);
+Route::get('files/{path}', [FileController::class, 'serveFile'])->where('path', '.*');
+
 Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
+    // Profile update route - semua user yang terautentikasi bisa update profilnya sendiri
+    // Route tanpa ID (menggunakan ID user yang sedang login)
+    Route::put('profile', [UserController::class, 'updateProfile']);
+    Route::patch('profile', [UserController::class, 'updateProfile']);
+    // Route dengan ID (untuk kompatibilitas)
+    Route::put('profile/{id}', [UserController::class, 'updateProfile']);
+    Route::patch('profile/{id}', [UserController::class, 'updateProfile']);
+    
     // Permissions
     Route::middleware('permission:mengelola permissions')->group(function () {
         Route::apiResource('permissions', PermissionController::class);
@@ -99,9 +112,13 @@ Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
     });
     // Users
     Route::middleware('permission:mengelola user')->group(function () {
-        Route::apiResource('users', UserController::class);
+        Route::apiResource('users', UserController::class)->except(['update']);
         Route::patch('users/{id}/status', [UserController::class, 'updateStatus']);
     });
+    
+    // Route khusus untuk update user - dengan pengecekan khusus untuk update profil sendiri
+    Route::put('users/{id}', [UserController::class, 'update']);
+    Route::patch('users/{id}', [UserController::class, 'update']);
     // Trips
     Route::middleware('permission:mengelola trips')->group(function () {
         Route::apiResource('trips', TripController::class);
@@ -109,9 +126,13 @@ Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
     });
     // Customers
     Route::middleware('permission:mengelola customers')->group(function () {
-        Route::apiResource('customers', CustomersController::class);
+        Route::apiResource('customers', CustomersController::class)->except(['update']);
         Route::patch('customers/{id}/status', [CustomersController::class, 'updateStatus']);
     });
+    
+    // Route khusus untuk update customer - dengan pengecekan khusus untuk update profil sendiri
+    Route::put('customers/{id}', [CustomersController::class, 'update']);
+    Route::patch('customers/{id}', [CustomersController::class, 'update']);
     // Hotel Occupancies
     Route::middleware('permission:mengelola hotel_occupancies|melihat hotel occupancy')->group(function () {
         Route::apiResource('hotels', HotelOccupanciesController::class);
@@ -168,22 +189,30 @@ Route::middleware(['auth:sanctum', 'check.user.status'])->group(function () {
         Route::post('assets/multiple', [AssetController::class, 'storeMultiple']);
     });
 
-    // Public asset serving - tidak memerlukan autentikasi
-    Route::get('assets/{id}/serve', [AssetController::class, 'serveImage']);
-
-    // Public file serving dengan keamanan yang lebih baik
-    Route::get('files/asset/{id}', [FileController::class, 'serveAsset']);
-    Route::get('files/{path}', [FileController::class, 'serveFile'])->where('path', '.*');
-    // Bookings - Protected Routes
+    // Bookings - Customer can view their own bookings
+    Route::get('my-bookings', [BookingController::class, 'myBookings']);
+    
+    // Bookings - Protected Routes (Admin only)
     Route::middleware('permission:mengelola bookings')->group(function () {
-        Route::apiResource('bookings', BookingController::class)->except(['store']);
+        Route::apiResource('bookings', BookingController::class)->except(['store', 'index', 'show']);
+        Route::get('bookings', [BookingController::class, 'index']);
         Route::patch('bookings/{id}/status', [BookingController::class, 'updateStatus']);
     });
-    // Transactions
+    
+    // Route khusus untuk show booking - dengan pengecekan khusus untuk melihat booking sendiri
+    Route::get('bookings/{id}', [BookingController::class, 'show']);
+    
+    // Transactions - Customer can view their own transactions by booking_id
+    Route::get('transactions', [TransactionController::class, 'getTransactionsByBooking']);
+    
+    // Transactions - Protected Routes (Admin/Staff only)
     Route::middleware('permission:mengelola transactions')->group(function () {
-        Route::apiResource('transactions', TransactionController::class);
+        Route::apiResource('transactions', TransactionController::class)->except(['store', 'index', 'show']);
         Route::patch('transactions/{id}/status', [TransactionController::class, 'updateStatus']);
     });
+    
+    // Route khusus untuk show transaction - dengan pengecekan khusus untuk melihat transaction sendiri
+    Route::get('transactions/{id}', [TransactionController::class, 'show']);
     // Bank Accounts
     Route::middleware('permission:mengelola bank account')->group(function () {
         Route::apiResource('bank_accounts', BankAccountController::class);

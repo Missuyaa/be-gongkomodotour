@@ -30,8 +30,8 @@ class FileUrlService
             return self::getDefaultImageUrl();
         }
 
-        // Untuk shared hosting, gunakan URL langsung ke public/storage
-        return url('/storage/' . $asset->file_path);
+        // Gunakan endpoint API untuk serve image (lebih aman dan konsisten)
+        return url('/api/assets/' . $asset->id . '/serve');
     }
 
     /**

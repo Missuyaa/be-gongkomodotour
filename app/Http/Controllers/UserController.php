@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Resources\UserResource;
 use App\Http\Requests\UserStoreRequest;
 use App\Http\Requests\UserUpdateRequest;
+use App\Http\Requests\ProfileUpdateRequest;
 use App\Services\Contracts\UserServiceInterface;
 
 class UserController extends Controller
@@ -77,10 +78,37 @@ class UserController extends Controller
 
     /**
      * Update the specified resource in storage.
+     * Jika user sedang update profilnya sendiri, tidak perlu permission.
+     * Jika user sedang update user lain, perlu permission "mengelola user".
      */
     public function update(UserUpdateRequest $request, string $id)
     {
-        $user = $this->userService->updateUser($id, $request->all());
+        // Konversi ID ke integer untuk perbandingan
+        $userId = (int) $id;
+        
+        // Jika user sedang update profilnya sendiri, gunakan logic updateProfile
+        if ($request->user()->id == $userId) {
+            // Validasi menggunakan ProfileUpdateRequest untuk update profil sendiri
+            $profileRequest = ProfileUpdateRequest::createFrom($request);
+            $profileRequest->setContainer(app());
+            $profileRequest->validateResolved();
+            
+            $user = $this->userService->updateProfile($userId, $profileRequest->validated());
+            if (!$user) {
+                return response()->json(['message' => 'User tidak ditemukan'], 404);
+            }
+            return new UserResource($user);
+        }
+        
+        // Untuk update user lain, cek permission
+        if (!$request->user()->can('mengelola user')) {
+            return response()->json([
+                'message' => 'User does not have the right permissions.'
+            ], 403);
+        }
+        
+        // Untuk update user lain, tetap menggunakan logic biasa (perlu permission)
+        $user = $this->userService->updateUser($userId, $request->all());
         if (!$user) {
             return response()->json(['message' => 'User tidak ditemukan'], 404);
         }
@@ -113,6 +141,22 @@ class UserController extends Controller
 
         if (!$user) {
             return response()->json(['message' => 'Failed to update user status'], 404);
+        }
+        return new UserResource($user);
+    }
+
+    /**
+     * Update profile user sendiri (tanpa permission mengelola user).
+     * Bisa digunakan dengan atau tanpa ID di URL.
+     */
+    public function updateProfile(ProfileUpdateRequest $request, string $id = null)
+    {
+        // Jika tidak ada ID, gunakan ID user yang sedang login
+        $userId = $id ?? $request->user()->id;
+        
+        $user = $this->userService->updateProfile($userId, $request->validated());
+        if (!$user) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
         }
         return new UserResource($user);
     }

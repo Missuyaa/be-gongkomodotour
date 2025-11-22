@@ -7,9 +7,10 @@ interface BookingServiceInterface
     /**
      * Mengambil semua bookings.
      *
+     * @param bool $forceRefresh Force refresh dari database (bypass cache)
      * @return mixed
      */
-    public function getAllBookings();
+    public function getAllBookings($forceRefresh = false);
 
     /**
      * Mengambil booking berdasarkan ID.
@@ -89,4 +90,12 @@ interface BookingServiceInterface
      * @return mixed
      */
     public function updateBookingStatus($id, $status);
+
+    /**
+     * Mengambil booking berdasarkan user_id.
+     *
+     * @param int $userId
+     * @return mixed
+     */
+    public function getBookingsByUserId($userId);
 }

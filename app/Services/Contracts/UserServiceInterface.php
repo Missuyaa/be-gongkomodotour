@@ -82,4 +82,13 @@ interface UserServiceInterface
      * @return mixed
      */
     public function updateUserStatus($id, $status);
+
+    /**
+     * Mengupdate profil user sendiri (termasuk data customer jika ada).
+     *
+     * @param int $id
+     * @param array $data
+     * @return mixed
+     */
+    public function updateProfile($id, array $data);
 }

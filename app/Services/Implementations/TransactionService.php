@@ -6,6 +6,8 @@ use App\Models\Booking;
 use App\Models\Surcharge;
 use App\Models\HotelRequest;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Services\Contracts\TransactionServiceInterface;
 use App\Repositories\Contracts\TransactionRepositoryInterface;
 
@@ -119,19 +121,19 @@ class TransactionService implements TransactionServiceInterface
     public function createTransaction(array $data)
     {
         try {
-            \Log::info('Creating transaction with data:', $data);
+            Log::info('Creating transaction with data:', $data);
 
             $transaction = $this->repository->createTransaction($data);
             if (!$transaction) {
-                \Log::error('Failed to create transaction in repository');
+                Log::error('Failed to create transaction in repository');
                 return false;
             }
 
-            \Log::info('Transaction created successfully with ID: ' . $transaction->id);
+            Log::info('Transaction created successfully with ID: ' . $transaction->id);
 
             // Proses upload file assets jika ada
             if (isset($data['assets']) && is_array($data['assets'])) {
-                \Log::info('Processing assets upload');
+                Log::info('Processing assets upload');
                 foreach ($data['assets'] as $assetData) {
                     if (isset($assetData['file'])) {
                         $file = $assetData['file'];
@@ -150,21 +152,21 @@ class TransactionService implements TransactionServiceInterface
 
             // Membuat detail transaksi untuk Hotel Request jika data tersedia
             if (isset($data['hotel_request_details']) && is_array($data['hotel_request_details'])) {
-                \Log::info('Processing hotel request details');
+                Log::info('Processing hotel request details');
                 foreach ($data['hotel_request_details'] as $detail) {
                     // Jika hotel_request_id tidak ada pada payload, maka buat HotelRequest baru
                     if (!isset($detail['hotel_request_id'])) {
-                        \Log::info('Creating new hotel request');
+                        Log::info('Creating new hotel request');
                         $hotelRequest = HotelRequest::create([
                             'transaction_id'       => $transaction->id,
-                            'user_id'              => auth()->id(),
+                            'user_id'              => Auth::id(),
                             'confirmed_note'       => $detail['confirmed_note'] ?? '',
                             'requested_hotel_name' => $detail['requested_hotel_name'] ?? '',
                             'request_status'       => 'Menunggu Konfirmasi',
                             'confirmed_price'      => $detail['confirmed_price'] ?? 0,
                         ]);
                         $detail['hotel_request_id'] = $hotelRequest->id;
-                        \Log::info('Hotel request created with ID: ' . $hotelRequest->id);
+                        Log::info('Hotel request created with ID: ' . $hotelRequest->id);
                     }
 
                     $transaction->details()->create([
@@ -180,13 +182,13 @@ class TransactionService implements TransactionServiceInterface
             // Pengecekan otomatis surcharge berdasarkan tanggal booking
             $booking = Booking::find($data['booking_id']);
             if ($booking) {
-                \Log::info('Checking for matching surcharge for booking dates: ' . $booking->start_date . ' to ' . $booking->end_date);
+                Log::info('Checking for matching surcharge for booking dates: ' . $booking->start_date . ' to ' . $booking->end_date);
                 $matchingSurcharge = Surcharge::where('start_date', $booking->start_date)
                     ->where('end_date', $booking->end_date)
                     ->first();
 
                 if ($matchingSurcharge) {
-                    \Log::info('Found matching surcharge with ID: ' . $matchingSurcharge->id);
+                    Log::info('Found matching surcharge with ID: ' . $matchingSurcharge->id);
                     $transaction->details()->create([
                         'amount'         => $matchingSurcharge->amount,
                         'description'    => 'Automatically added surcharge based on booking dates',
@@ -199,7 +201,7 @@ class TransactionService implements TransactionServiceInterface
 
             // Jika masih ada data surcharge_details yang dikirim secara manual, proses juga
             if (isset($data['surcharge_details']) && is_array($data['surcharge_details'])) {
-                \Log::info('Processing manual surcharge details');
+                Log::info('Processing manual surcharge details');
                 foreach ($data['surcharge_details'] as $detail) {
                     $transaction->details()->create([
                         'amount'         => $detail['amount'] ?? 0,
@@ -214,11 +216,11 @@ class TransactionService implements TransactionServiceInterface
             $this->clearTransactionCaches();
             // Muat relasi 'details' sebelum mengembalikannya
             $result = $transaction->load('details', 'booking', 'assets');
-            \Log::info('Transaction process completed successfully');
+            Log::info('Transaction process completed successfully');
             return $result;
         } catch (\Exception $e) {
-            \Log::error('Error creating transaction: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Error creating transaction: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             return false;
         }
     }
@@ -238,7 +240,7 @@ class TransactionService implements TransactionServiceInterface
 
             // Proses upload file assets jika ada
             if (isset($data['assets']) && is_array($data['assets'])) {
-                \Log::info('Processing assets upload for update');
+                Log::info('Processing assets upload for update');
                 foreach ($data['assets'] as $assetData) {
                     if (isset($assetData['file'])) {
                         $file = $assetData['file'];
@@ -265,7 +267,7 @@ class TransactionService implements TransactionServiceInterface
                     if (!isset($detail['hotel_request_id'])) {
                         $hotelRequest = HotelRequest::create([
                             'transaction_id'       => $transaction->id,
-                            'user_id'              => auth()->id(), // sesuaikan dengan logika otentikasi yang digunakan
+                            'user_id'              => Auth::id(),
                             'confirmed_note'       => $detail['confirmed_note'] ?? '',
                             'requested_hotel_name' => $detail['requested_hotel_name'] ?? '',
                             'request_status'       => 'Menunggu Konfirmasi',
@@ -345,12 +347,23 @@ class TransactionService implements TransactionServiceInterface
         if ($transaction) {
             $result = $this->repository->updateTransactionStatus($id, $status);
 
-            $this->clearTransactionCaches($id);
+            $this->clearTransactionCaches();
 
             return $result;
         }
 
         return null;
+    }
+
+    /**
+     * Mengambil transaksi berdasarkan booking_id.
+     *
+     * @param int $bookingId
+     * @return mixed
+     */
+    public function getTransactionsByBookingId($bookingId)
+    {
+        return $this->repository->getTransactionsByBookingId($bookingId);
     }
 
     /**
